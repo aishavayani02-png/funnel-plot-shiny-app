@@ -41,4 +41,4 @@ shiny::runApp("path/to/funnel-plot-shiny-app")
 ## Notes
 This repository currently contains the standalone app only. The app fits the example meta-analysis models internally from raw example datasets, then draws the funnel plot and associated results from those fitted models.
 
-For MetaPairwise integration, the analysis and plotting functions have been separated from Shiny-specific code so they can be reused more easily. The reproducible script-download system in MetaPairwise has not been connected at this stage.
+For MetaPairwise integration, the analysis and plotting functions have been separated from Shiny-specific code so they can be reused more easily. The reproducible script-download system in MetaPairwise has not been connected yet.
