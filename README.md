@@ -1,20 +1,24 @@
 # Funnel Plot Shiny App
 
-Standalone Shiny app for exploring funnel plot variations, publication bias tests, limit estimate lines, trim-and-fill adjustment, study labelling, plot legends and downloadable plots.
+This is a standalone Shiny app for exploring funnel plot variations, publication bias tests, limit estimate lines, trim-and-fill adjustment, study labelling, plot legends and downloadable plots.
 
-The current version uses example datasets from the `metadat` package. It is intended to be the starting point for later integration into MetaPairwise.
+The app currently uses example datasets from the `metadat` package. The code has been split up so that the statistical and plotting work is not tied too tightly to the standalone Shiny app. That should make it easier to reuse these pieces later in MetaPairwise.
 
 ## Structure
 
-The app uses the standard Shiny split-file structure with reusable business logic separated into `R/` files:
+The standalone app still runs through the usual Shiny files:
 
-- `global.R`: package loading, constants, and sourcing of shared functions.
-- `ui.R`: user interface layout and controls.
-- `server.R`: Shiny reactive wiring and output definitions.
-- `R/helpers.R`: shared formatting, scale conversion, labels, and small utility functions.
-- `R/model_analysis.R`: example data preparation, model fitting, bias tests, trim-and-fill, p-value counts, and limit-line estimates.
-- `R/plotting.R`: funnel plot generation, plot legends, study key footer, and download plot footers.
-- `R/results_text.R`: app result text, further-information links, and download result summaries.
+- `global.R` loads packages, sets shared constants, and sources the files in `R/`.
+- `ui.R` calls the funnel plot module UI.
+- `server.R` calls the funnel plot module server.
+
+Most of the work now lives in the `R/` folder:
+
+- `R/mod_funnel_plot.R` contains the Shiny module, `funnelPlotUI()` and `funnelPlotServer()`. This is where the user controls and Shiny reactive wiring sit.
+- `R/helpers.R` contains small shared helpers for labels, number formatting, p-values, scale conversions and y-axis transformations.
+- `R/model_analysis.R` prepares the example data, fits the meta-analysis models, runs bias tests, trim-and-fill, p-value counts and limit-line calculations.
+- `R/plotting.R` draws the funnel plot, plot legends, study labels/key and the extra footer panels used in downloaded plots.
+- `R/results_text.R` builds the text shown below the plot, including analysis results, method notes, study key text and further reading links.
 
 ## Requirements
 
@@ -38,7 +42,14 @@ Or from another R session:
 shiny::runApp("path/to/funnel-plot-shiny-app")
 ```
 
-## Notes
-This repository currently contains the standalone app only. The app fits the example meta-analysis models internally from raw example datasets, then draws the funnel plot and associated results from those fitted models.
+Or directly from GitHub:
 
-For MetaPairwise integration, the analysis and plotting functions have been separated from Shiny-specific code so they can be reused more easily. The reproducible script-download system in MetaPairwise has not been connected yet.
+```r
+shiny::runGitHub("funnel-plot-shiny-app", "aishavayani02-png", ref = "main")
+```
+
+## Notes
+
+This repository currently contains the standalone app only. It still fits the example meta-analysis models internally from raw example datasets, then draws the funnel plot and associated results from those fitted models.
+
+For MetaPairwise integration, the app now has two useful layers: reusable analysis/plotting functions, and a Shiny module wrapped around them. The reproducible script-download system in MetaPairwise has not been connected yet.
