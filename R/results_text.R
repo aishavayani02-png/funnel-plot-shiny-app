@@ -1,5 +1,35 @@
 # Text and HTML generation for app outputs and downloaded plot footers.
 
+#' Format a p-value for a result sentence
+#' @param x Numeric p-value.
+#' @param html Whether to escape the less-than sign for HTML.
+#' @return A character string such as "p = 0.05".
+fmt_p_phrase <- function(x, html = TRUE) {
+  p <- format.pval(as.numeric(x)[1], digits = 3, eps = 0.001)
+  less_than <- "<"
+  if (html) {
+    less_than <- "&lt;"
+    p <- gsub("<", less_than, p, fixed = TRUE)
+  }
+  if (startsWith(p, less_than)) {
+    return(paste0("p ", p))
+  }
+  return(paste0("p = ", p))
+}
+
+#' Build a link for the reading list
+#' @param url Destination URL.
+#' @param label Link text.
+#' @return An HTML anchor that opens in a new tab.
+link <- function(url, label) {
+  return(paste0("<a href='", url, "' target='_blank' rel='noopener noreferrer'>", label, "</a>"))
+}
+
+#' Summarise the pooled estimate below the plot
+#' @inheritParams select_refline
+#' @inheritParams effect_label
+#' @inheritParams model_name
+#' @return An HTML fragment.
 analysis_summary_html <- function(res, datatype, measure, method,
                                   natural_scale, refline_mode) {
   vals <- analysis_to_display(c(res$b, res$ci.lb, res$ci.ub),
@@ -17,7 +47,7 @@ analysis_summary_html <- function(res, datatype, measure, method,
                      "custom" = "The vertical blue line shows the user-defined reference value.",
                      "none" = "No vertical reference line is currently shown.")
 
-  paste0(
+  return(paste0(
     "<div class='result-block'>",
     "<p><b>Current Analysis</b></p>",
     "<p>", model_name(method), " pooled <b>", label, "</b>: <b>",
@@ -26,9 +56,15 @@ analysis_summary_html <- function(res, datatype, measure, method,
     fmt_num(vals[3], plot_digits), "]</b>.", tau_text, "</p>",
     "<p>", ref_text, " The funnel confidence region is fixed at 95% for the standard plot.</p>",
     "</div>"
-  )
+  ))
 }
 
+#' Summarise the selected asymmetry test
+#' @param test Result from run_bias_test(), or NULL when the test fails.
+#' @param show_test_line Whether the Egger line was requested.
+#' @inheritParams run_bias_test
+#' @inheritParams effect_label
+#' @return An HTML fragment.
 bias_test_html <- function(test, biastest, datatype, measure,
                            natural_scale, show_test_line) {
   if (is.null(test)) {
@@ -45,7 +81,11 @@ bias_test_html <- function(test, biastest, datatype, measure,
   } else {
     "Peters' sample-size regression test"
   }
-  predictor_text <- if (identical(biastest, "egger")) "standard error" else "inverse sample size"
+  predictor_text <- if (identical(biastest, "egger")) {
+    "standard error"
+  } else {
+    "inverse sample size"
+  }
   limit_vals <- analysis_to_display(c(test$est, test$ci.lb, test$ci.ub),
                                     datatype, measure, natural_scale)
 
@@ -57,7 +97,7 @@ bias_test_html <- function(test, biastest, datatype, measure,
     ""
   }
 
-  paste0(
+  return(paste0(
     "<div class='result-block'>",
     "<p><b>Publication Bias Test</b></p>",
     "<p><b>", test_name, "</b> using ", predictor_text,
@@ -67,9 +107,12 @@ bias_test_html <- function(test, biastest, datatype, measure,
     fmt_num(limit_vals[3], plot_digits), "]</b>.</p>",
     line_note,
     "</div>"
-  )
+  ))
 }
 
+#' List the estimates for the selected limit lines
+#' @param limit_rows Result from limit_line_estimates().
+#' @return An HTML fragment.
 limit_line_html <- function(limit_rows) {
   if (length(limit_rows) == 0) {
     return(paste0(
@@ -81,23 +124,27 @@ limit_line_html <- function(limit_rows) {
   }
 
   items <- vapply(limit_rows, function(row) {
-    paste0(
+    return(paste0(
       "<li><b>", row$predictor_label, "</b> limit-line estimate ",
       row$location, ": <b>", row$effect_label, " = ",
       fmt_num(row$estimate, plot_digits), "</b> with 95% CI <b>[",
       fmt_num(row$ci.lb, plot_digits), ", ",
       fmt_num(row$ci.ub, plot_digits), "]</b>.</li>"
-    )
+    ))
   }, character(1))
 
-  paste0(
+  return(paste0(
     "<div class='result-block'>",
     "<p><b>Limit Estimate Lines</b></p>",
     "<ul>", paste(items, collapse = ""), "</ul>",
     "</div>"
-  )
+  ))
 }
 
+#' Summarise the trim-and-fill analysis
+#' @param trimfill_model Adjusted model, or NULL if the fit failed.
+#' @inheritParams effect_label
+#' @return An HTML fragment.
 trimfill_html <- function(trimfill_model, datatype, measure, natural_scale) {
   if (is.null(trimfill_model)) {
     return(paste0(
@@ -112,7 +159,7 @@ trimfill_html <- function(trimfill_model, datatype, measure, natural_scale) {
                               datatype, measure, natural_scale)
   label <- effect_label(datatype, measure, natural_scale)
 
-  paste0(
+  return(paste0(
     "<div class='result-block'>",
     "<p><b>Trim-and-Fill Results</b></p>",
     "<p>Imputed studies (k0): <b>", trimfill_model$k0, "</b>.</p>",
@@ -121,11 +168,18 @@ trimfill_html <- function(trimfill_model, datatype, measure, natural_scale) {
     fmt_num(vals[2], plot_digits), ", ", fmt_num(vals[3], plot_digits),
     "]</b>. The purple dashed line shows this adjusted estimate.</p>",
     "</div>"
-  )
+  ))
 }
 
+#' Describe the selected shading and any contour counts
+#' @param region_shading Shading mode, "none", "contour" or "heterogeneity".
+#' @param counts Counts returned by study_pvalue_distribution() for contours.
+#' @inheritParams model_name
+#' @return An HTML fragment, or NULL if shading is off.
 region_info_html <- function(region_shading, method, counts = NULL) {
-  if (identical(region_shading, "none")) return(NULL)
+  if (identical(region_shading, "none")) {
+    return(NULL)
+  }
 
   if (identical(region_shading, "heterogeneity")) {
     if (!identical(method, "REML")) {
@@ -145,9 +199,11 @@ region_info_html <- function(region_shading, method, counts = NULL) {
   }
 
   total <- counts$total
-  pct <- function(x) round(100 * x / total)
+  pct <- function(x) {
+    return(round(100 * x / total))
+  }
 
-  paste0(
+  return(paste0(
     "<div class='result-block'>",
     "<p><b>Region Shading Results</b></p>",
     "<p>Contour shading shows study-level p-value regions around the null effect. Observed studies are counted by region below.</p>",
@@ -158,19 +214,28 @@ region_info_html <- function(region_shading, method, counts = NULL) {
     "<li>0.00 &lt; p &lt;= 0.01: ", counts$veryhigh, " studies (", pct(counts$veryhigh), "%)</li>",
     "</ul>",
     "</div>"
-  )
+  ))
 }
 
+#' List study names in plot order
+#' @param labels Study labels in the order plotted.
+#' @return An HTML fragment containing a numbered list.
 study_key_html <- function(labels) {
   items <- paste0("<li>", labels, "</li>")
-  paste0(
+  return(paste0(
     "<div class='result-block'>",
     "<p><b>Study Key</b></p>",
     "<ol>", paste(items, collapse = ""), "</ol>",
     "</div>"
-  )
+  ))
 }
 
+#' List reading links for the selected methods
+#' @param trimfill Whether trim-and-fill was selected ("yes" or "no").
+#' @inheritParams region_info_html
+#' @inheritParams run_bias_test
+#' @inheritParams limit_line_estimates
+#' @return An HTML fragment.
 method_info_html <- function(region_shading, biastest, datatype, show_limit, trimfill) {
   bits <- c(
     paste0(link("https://wviechtb.github.io/metafor/reference/funnel.html", "metafor funnel() reference"),
@@ -199,14 +264,22 @@ method_info_html <- function(region_shading, biastest, datatype, show_limit, tri
               link("https://doi.org/10.1111/j.0006-341X.2000.00455.x", "Duval and Tweedie (2000): trim and fill"))
   }
 
-  paste0(
+  return(paste0(
     "<div class='result-block method-links'>",
     "<p><b>Further Information</b></p>",
     "<ul><li>", paste(bits, collapse = "</li><li>"), "</li></ul>",
     "</div>"
-  )
+  ))
 }
 
+#' Summarise the analysis for a downloaded plot
+#' @param bias_test Result from run_bias_test(), or NULL.
+#' @inheritParams analysis_summary_html
+#' @inheritParams run_bias_test
+#' @inheritParams limit_line_html
+#' @inheritParams trimfill_html
+#' @inheritParams method_info_html
+#' @return Character vector of summary lines.
 analysis_results_lines <- function(res, datatype, measure, method, natural_scale,
                                    biastest, bias_test, show_limit, limit_rows,
                                    trimfill, trimfill_model, region_shading) {
@@ -227,17 +300,21 @@ analysis_results_lines <- function(res, datatype, measure, method, natural_scale
   }
 
   if (!identical(biastest, "none") && !is.null(bias_test)) {
-    test_name <- if (identical(biastest, "egger")) "Egger's test" else "Peters' test"
+    test_name <- if (identical(biastest, "egger")) {
+      "Egger's test"
+    } else {
+      "Peters' test"
+    }
     lines <- c(lines, paste0(test_name, ": ", fmt_p_phrase(bias_test$pval, html = FALSE), "."))
   }
 
   if (identical(show_limit, "yes") && length(limit_rows) > 0) {
     limit_lines <- vapply(limit_rows, function(row) {
-      paste0(row$predictor_label, " limit-line estimate ",
-             row$location, ": ", row$effect_label, " = ",
-             fmt_num(row$estimate, plot_digits), " (95% CI ",
-             fmt_num(row$ci.lb, plot_digits), " to ",
-             fmt_num(row$ci.ub, plot_digits), ").")
+      return(paste0(row$predictor_label, " limit-line estimate ",
+                    row$location, ": ", row$effect_label, " = ",
+                    fmt_num(row$estimate, plot_digits), " (95% CI ",
+                    fmt_num(row$ci.lb, plot_digits), " to ",
+                    fmt_num(row$ci.ub, plot_digits), ")."))
     }, character(1))
     lines <- c(lines, limit_lines)
   }
@@ -258,5 +335,5 @@ analysis_results_lines <- function(res, datatype, measure, method, natural_scale
     lines <- c(lines, "Region shading: heterogeneity band incorporating tau-squared.")
   }
 
-  lines
+  return(lines)
 }

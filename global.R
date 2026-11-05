@@ -9,9 +9,3 @@ library(metadat)
 plot_digits <- 2L
 plot_steps <- 5L
 plot_level <- 95
-
-source("R/helpers.R", local = TRUE)
-source("R/model_analysis.R", local = TRUE)
-source("R/plotting.R", local = TRUE)
-source("R/results_text.R", local = TRUE)
-source("R/mod_funnel_plot.R", local = TRUE)

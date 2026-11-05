@@ -1,9 +1,12 @@
 # Shiny module for the standalone funnel plot interface.
 
+#' Build the funnel plot interface
+#' @param id Module ID shared with funnelPlotServer().
+#' @return A Shiny page with the controls and results.
 funnelPlotUI <- function(id) {
   ns <- NS(id)
 
-  fluidPage(
+  return(fluidPage(
     tags$head(
       tags$style(HTML("
         .well { max-width: 360px; }
@@ -62,20 +65,22 @@ funnelPlotUI <- function(id) {
 
         uiOutput(ns("biastest_ui")),
         conditionalPanel(
-          condition = sprintf("input['%s'] == 'egger'", ns("biastest")),
-          checkboxInput(ns("showTestLine"), "Show Egger regression line", value = FALSE)
+          condition = "input.biastest == 'egger'",
+          checkboxInput(ns("showTestLine"), "Show Egger regression line", value = FALSE),
+          ns = ns
         ),
 
         radioButtons(ns("showLimit"), "Limit Estimate Lines:",
                      choices = c("No" = "no", "Yes" = "yes"),
                      selected = "no"),
         conditionalPanel(
-          condition = sprintf("input['%s'] == 'yes'", ns("showLimit")),
+          condition = "input.showLimit == 'yes'",
           checkboxGroupInput(ns("limitPredictors"), "Limit Line Predictors:",
                              choices = c("Standard error" = "sei",
                                          "Sampling variance" = "vi"),
                              selected = "sei"),
-          checkboxInput(ns("limitExtrapolate"), "Extrapolate to SE = 0", value = TRUE)
+          checkboxInput(ns("limitExtrapolate"), "Extrapolate to SE = 0", value = TRUE),
+          ns = ns
         ),
 
         radioButtons(ns("trimfill"), "Trim-and-Fill Adjustment:",
@@ -93,14 +98,28 @@ funnelPlotUI <- function(id) {
       ),
 
       mainPanel(
-        uiOutput(ns("tabs_ui"))
+        h3("Funnel Plot"),
+        uiOutput(ns("plot_ui")),
+        uiOutput(ns("studyKey")),
+        uiOutput(ns("analysisSummary")),
+        uiOutput(ns("biasTestOutput")),
+        uiOutput(ns("limitLineOutput")),
+        uiOutput(ns("trimfillInfo")),
+        uiOutput(ns("regionInfo")),
+        uiOutput(ns("methodInfo")),
+        tags$hr(),
+        uiOutput(ns("download_ui")),
+        tags$hr()
       )
     )
-  )
+  ))
 }
 
+#' Register the funnel plot inputs and outputs
+#' @param id Module ID shared with funnelPlotUI().
+#' @return The value returned by shiny::moduleServer().
 funnelPlotServer <- function(id) {
-  moduleServer(id, function(input, output, session) {
+  return(moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
     output$measure_ui <- renderUI({
@@ -136,7 +155,11 @@ funnelPlotServer <- function(id) {
       }
 
       current <- isolate(input$biastest)
-      selected <- if (!is.null(current) && current %in% unname(choices)) current else "none"
+      selected <- if (!is.null(current) && current %in% unname(choices)) {
+        current
+      } else {
+        "none"
+      }
 
       radioButtons(ns("biastest"), "Publication Bias Test:",
                    choices = choices,
@@ -145,15 +168,18 @@ funnelPlotServer <- function(id) {
 
     output$custom_refline_ui <- renderUI({
       req(input$datatype, input$measure)
-      if (!identical(input$reflineMode, "custom")) return(NULL)
+      if (!identical(input$reflineMode, "custom")) {
+        return(NULL)
+      }
 
       natural <- isTRUE(input$naturalScale)
-      label <- if (is_log_effect(input$datatype, input$measure) && natural) {
-        paste0("Custom reference line (", input$measure, " scale):")
+      if (is_log_effect(input$datatype, input$measure) && natural) {
+        label <- paste0("Custom reference line (", input$measure, " scale):")
+        default_value <- 1
       } else {
-        "Custom reference line (analysis scale):"
+        label <- "Custom reference line (analysis scale):"
+        default_value <- 0
       }
-      default_value <- if (is_log_effect(input$datatype, input$measure) && natural) 1 else 0
 
       numericInput(ns("customRefline"), label, value = default_value, step = 0.1)
     })
@@ -173,7 +199,10 @@ funnelPlotServer <- function(id) {
 
     selected_limit_predictors <- reactive({
       predictors <- input$limitPredictors
-      if (is.null(predictors)) character(0) else predictors
+      if (is.null(predictors)) {
+        return(character(0))
+      }
+      predictors
     })
 
     selected_refline <- reactive({
@@ -276,8 +305,12 @@ funnelPlotServer <- function(id) {
     })
 
     output$biasTestOutput <- renderUI({
-      if (identical(input$biastest, "none")) return(NULL)
-      if (identical(input$biastest, "peters") && !identical(input$datatype, "binary")) return(NULL)
+      if (identical(input$biastest, "none")) {
+        return(NULL)
+      }
+      if (identical(input$biastest, "peters") && !identical(input$datatype, "binary")) {
+        return(NULL)
+      }
 
       res <- model()
       validate(need(!is.null(res), "Waiting for a valid model..."))
@@ -291,7 +324,9 @@ funnelPlotServer <- function(id) {
     })
 
     output$limitLineOutput <- renderUI({
-      if (!identical(input$showLimit, "yes")) return(NULL)
+      if (!identical(input$showLimit, "yes")) {
+        return(NULL)
+      }
 
       res <- model()
       validate(need(!is.null(res), "Waiting for a valid model..."))
@@ -300,7 +335,9 @@ funnelPlotServer <- function(id) {
     })
 
     output$trimfillInfo <- renderUI({
-      if (!identical(input$trimfill, "yes")) return(NULL)
+      if (!identical(input$trimfill, "yes")) {
+        return(NULL)
+      }
 
       HTML(trimfill_html(trimfill_model(),
                          input$datatype,
@@ -309,7 +346,9 @@ funnelPlotServer <- function(id) {
     })
 
     output$regionInfo <- renderUI({
-      if (identical(input$regionShading, "none")) return(NULL)
+      if (identical(input$regionShading, "none")) {
+        return(NULL)
+      }
 
       counts <- if (identical(input$regionShading, "contour")) {
         pvalue_distribution()
@@ -321,7 +360,9 @@ funnelPlotServer <- function(id) {
     })
 
     output$studyKey <- renderUI({
-      if (!identical(input$labelMode, "key")) return(NULL)
+      if (!identical(input$labelMode, "key")) {
+        return(NULL)
+      }
       HTML(study_key_html(effect_data()$labels))
     })
 
@@ -339,13 +380,19 @@ funnelPlotServer <- function(id) {
       },
       content = function(file) {
         res <- model()
-        if (is.null(res)) return()
+        if (is.null(res)) {
+          return()
+        }
 
         include_results <- isTRUE(input$downloadResults)
         include_key <- identical(input$labelMode, "key")
         extra_height <- 1.4
-        extra_height <- extra_height + if (include_results) 2 else 0
-        extra_height <- extra_height + if (include_key) 1.8 else 0
+        if (include_results) {
+          extra_height <- extra_height + 2
+        }
+        if (include_key) {
+          extra_height <- extra_height + 1.8
+        }
         height_in <- max(6, min(15, input$plotHeight / 80 + extra_height))
 
         if (identical(input$formatCurrent, "PDF")) {
@@ -354,57 +401,46 @@ funnelPlotServer <- function(id) {
           grDevices::png(file, width = 9, height = height_in, units = "in", res = 300)
         }
 
-        if (include_results || include_key) {
-          heights <- c(4.8,
-                       0.9,
-                       if (include_key) 1.1 else NULL,
-                       if (include_results) 1.25 else NULL)
-          layout(matrix(seq_along(heights), ncol = 1), heights = heights)
-          legend_info <- draw_funnel_plot(res,
-                                          effect_data(),
-                                          plot_options(),
-                                          trimfill_model(),
-                                          selected_refline(),
-                                          draw_legend = FALSE)
-          draw_plot_legend_footer(legend_info)
-          if (include_key) draw_study_key_footer(study_key_lines(effect_data()$labels))
-          if (include_results) draw_results_footer(analysis_lines())
-          layout(1)
-        } else {
-          heights <- c(4.8, 0.9)
-          layout(matrix(seq_along(heights), ncol = 1), heights = heights)
-          legend_info <- draw_funnel_plot(res,
-                                          effect_data(),
-                                          plot_options(),
-                                          trimfill_model(),
-                                          selected_refline(),
-                                          draw_legend = FALSE)
-          draw_plot_legend_footer(legend_info)
-          layout(1)
+        heights <- c(4.8, 0.9)
+        if (include_key) {
+          heights <- c(heights, 1.1)
         }
-        grDevices::dev.off()
+        if (include_results) {
+          heights <- c(heights, 1.25)
+        }
+
+        layout(matrix(seq_along(heights), ncol = 1), heights = heights)
+        legend_info <- draw_funnel_plot(res,
+                                        effect_data(),
+                                        plot_options(),
+                                        trimfill_model(),
+                                        selected_refline(),
+                                        draw_legend = FALSE)
+        draw_plot_legend_footer(legend_info)
+        if (include_key) {
+          draw_study_key_footer(effect_data()$labels)
+        }
+        if (include_results) {
+          draw_results_footer(analysis_lines())
+        }
+        layout(1)
+        return(grDevices::dev.off())
       }
     )
 
-    output$tabs_ui <- renderUI({
-      plot_h <- paste0(input$plotHeight, "px")
-      tags$div(
-        h3("Funnel Plot"),
-        plotOutput(ns("funnelMain"), height = plot_h),
-        uiOutput(ns("studyKey")),
-        uiOutput(ns("analysisSummary")),
-        uiOutput(ns("biasTestOutput")),
-        uiOutput(ns("limitLineOutput")),
-        uiOutput(ns("trimfillInfo")),
-        uiOutput(ns("regionInfo")),
-        uiOutput(ns("methodInfo")),
-        tags$hr(),
+    output$plot_ui <- renderUI({
+      plotOutput(ns("funnelMain"), height = paste0(input$plotHeight, "px"))
+    })
+
+    # Rebuild the download controls on resize, as in the original layout.
+    output$download_ui <- renderUI({
+      req(input$plotHeight)
+      tagList(
         radioButtons(ns("formatCurrent"), "Download current plot as:",
                      choices = c("PDF", "PNG"), inline = TRUE),
         checkboxInput(ns("downloadResults"), "Include analysis results below downloaded plot", value = FALSE),
-        downloadButton(ns("downloadCurrentPlot"), "Download Plot"),
-        tags$hr()
+        downloadButton(ns("downloadCurrentPlot"), "Download Plot")
       )
     })
-  })
+  }))
 }

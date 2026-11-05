@@ -8,7 +8,7 @@ The app currently uses example datasets from the metadat package. The code has b
 
 The app still runs through the usual Shiny files:
 
-- `global.R` loads packages, sets shared constants, and sources the files in `R/`.
+- `global.R` loads the packages and sets the shared plot defaults. Shiny loads the files in `R/` when the app starts.
 - `ui.R` calls the funnel plot module UI.
 - `server.R` calls the funnel plot module server.
 
@@ -46,4 +46,12 @@ Or directly from GitHub:
 
 ```r
 shiny::runGitHub("funnel-plot-shiny-app", "aishavayani02-png", ref = "main")
+```
+
+## Tests
+
+Run the analysis checks from the repository root in a terminal:
+
+```sh
+Rscript tests/test-analysis.R
 ```
