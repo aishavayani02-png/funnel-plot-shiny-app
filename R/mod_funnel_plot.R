@@ -1,5 +1,3 @@
-# Shiny module for the standalone funnel plot interface.
-
 #' Build the funnel plot interface
 #' @param id Module ID shared with funnelPlotServer().
 #' @return A Shiny page with the controls and results.

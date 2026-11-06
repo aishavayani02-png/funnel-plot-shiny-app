@@ -1,5 +1,3 @@
-# Text and HTML generation for app outputs and downloaded plot footers.
-
 #' Format a p-value for a result sentence
 #' @param x Numeric p-value.
 #' @param html Whether to escape the less-than sign for HTML.

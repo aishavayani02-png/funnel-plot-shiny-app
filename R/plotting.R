@@ -1,6 +1,3 @@
-# Plot generation functions. These functions work from fitted models, prepared
-# effect data, and simple option lists rather than Shiny reactives.
-
 #' Convert study variances to y-axis coordinates
 #' @param vi Numeric vector of sampling variances.
 #' @param yaxis Funnel plot y-axis code.

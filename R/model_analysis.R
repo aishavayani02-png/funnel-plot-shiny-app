@@ -1,6 +1,3 @@
-# Data preparation and analysis functions. These take ordinary R values rather
-# than Shiny inputs or reactives so they can be reused outside this app.
-
 #' Calculate study effects for the selected example dataset
 #' @param datatype Outcome type, "binary" or "continuous".
 #' @param measure Effect measure passed to metafor::escalc().

@@ -276,7 +276,7 @@ funnelResultsServer <- function(id, settings) {
       plotOutput(ns("funnelMain"), height = paste0(settings$plot_height(), "px"))
     })
 
-    # Rebuild the download controls on resize, as in the original layout.
+    # Changing the plot height resets the download controls.
     output$download_ui <- renderUI({
       req(settings$plot_height())
       tagList(
