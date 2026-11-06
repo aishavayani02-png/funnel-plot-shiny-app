@@ -14,7 +14,9 @@ The app still runs through the usual Shiny files:
 
 Most of the work now lives in the R folder:
 
-- `R/mod_funnel_plot.R` contains the Shiny module, `funnelPlotUI()` and `funnelPlotServer()`. This is where the user controls and Shiny reactive wiring sit.
+- `R/mod_funnel_plot.R` puts the options and results panels together.
+- `R/mod_funnel_options.R` builds the sidebar controls and returns their settings as a named list of reactives.
+- `R/mod_funnel_results.R` uses those settings to update the plot, summaries and downloads.
 - `R/helpers.R` contains small shared helpers for labels, number formatting, p-values, scale conversions and y-axis transformations.
 - `R/model_analysis.R` prepares the example data, fits the meta-analysis models, runs bias tests, trim-and-fill, p-value counts and limit-line calculations.
 - `R/plotting.R` draws the funnel plot, plot legends, study labels/key and the extra footer panels used in downloaded plots.
@@ -50,8 +52,9 @@ shiny::runGitHub("funnel-plot-shiny-app", "aishavayani02-png", ref = "main")
 
 ## Tests
 
-Run the analysis checks from the repository root in a terminal:
+Run these checks from the repository root in a terminal:
 
 ```sh
 Rscript tests/test-analysis.R
+Rscript tests/test-modules.R
 ```
